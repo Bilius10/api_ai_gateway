@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
@@ -56,9 +56,8 @@ class ProviderConfig(BaseModel):
             raise ValueError("base_url must use http or https")
         if parsed.username or parsed.password:
             raise ValueError("base_url must not contain credentials")
-        sensitive = {"key", "api_key", "apikey", "token", "secret", "password", "auth"}
-        if any(name.lower() in sensitive for name, _ in parse_qsl(parsed.query, keep_blank_values=True)):
-            raise ValueError("base_url query must not contain credentials")
+        if parsed.query or parsed.fragment:
+            raise ValueError("base_url must not contain a query string or fragment")
         return value.rstrip("/")
 
 

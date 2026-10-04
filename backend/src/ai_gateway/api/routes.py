@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from ai_gateway.config import Settings
 from ai_gateway.models import (
+    ErrorKind,
     GatewayErrorBody,
     GenerateRequest,
     GenerateResponse,
@@ -81,7 +82,9 @@ async def generate(
             message=exc.message,
             attempts=exc.attempts,
         )
-        raise HTTPException(status_code=503, detail=body.model_dump(mode="json")) from exc
+        raise HTTPException(
+            status_code=_gateway_status(exc.kind), detail=body.model_dump(mode="json")
+        ) from exc
 
 
 @router.post("/generate/stream")
@@ -109,7 +112,9 @@ async def generate_stream(
             message=exc.message,
             attempts=exc.attempts,
         )
-        raise HTTPException(status_code=503, detail=body.model_dump(mode="json")) from exc
+        raise HTTPException(
+            status_code=_gateway_status(exc.kind), detail=body.model_dump(mode="json")
+        ) from exc
 
     async def events() -> AsyncIterator[str]:
         yield _sse("start", {"request_id": stream.request_id})
@@ -337,6 +342,21 @@ def _credential_error(exc: Exception) -> HTTPException:
         status_code=503,
         detail="credential store unavailable; configure AI_GATEWAY_MASTER_KEY",
     )
+
+
+def _gateway_status(kind: ErrorKind) -> int:
+    return {
+        ErrorKind.AUTHENTICATION: status.HTTP_401_UNAUTHORIZED,
+        ErrorKind.PROVIDER_NOT_FOUND: status.HTTP_404_NOT_FOUND,
+        ErrorKind.INVALID_REQUEST: status.HTTP_400_BAD_REQUEST,
+        ErrorKind.RATE_LIMIT: status.HTTP_429_TOO_MANY_REQUESTS,
+        ErrorKind.QUOTA: status.HTTP_429_TOO_MANY_REQUESTS,
+        ErrorKind.TIMEOUT: status.HTTP_504_GATEWAY_TIMEOUT,
+        ErrorKind.OFFLINE: status.HTTP_503_SERVICE_UNAVAILABLE,
+        ErrorKind.UPSTREAM: status.HTTP_502_BAD_GATEWAY,
+        ErrorKind.UNKNOWN: status.HTTP_502_BAD_GATEWAY,
+        ErrorKind.CANCELLED: 499,
+    }[kind]
 
 
 def _restore_secret(

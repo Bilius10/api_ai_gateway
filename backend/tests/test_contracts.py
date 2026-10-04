@@ -51,6 +51,37 @@ async def test_openai_compatible_contracts(kind: ProviderKind) -> None:
 
 
 @pytest.mark.asyncio
+async def test_openai_compatible_stream_contract() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert payload["stream"] is True
+        return httpx.Response(
+            200,
+            text='data: {"choices":[{"delta":{"content":"one"}}]}\n\n'
+            'data: {"choices":[{"delta":{"content":" two"}}]}\n\n'
+            "data: [DONE]\n\n",
+        )
+
+    adapter = OpenAICompatibleAdapter(
+        provider(ProviderKind.OPENAI), "test-key", httpx.MockTransport(handler)
+    )
+    assert [chunk async for chunk in adapter.stream("question")] == ["one", " two"]
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_stream_classifies_authentication_error() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, text="unauthorized")
+
+    adapter = OpenAICompatibleAdapter(
+        provider(ProviderKind.OPENAI), "bad-key", httpx.MockTransport(handler)
+    )
+    with pytest.raises(ProviderError) as failure:
+        await anext(adapter.stream("question"))
+    assert failure.value.kind is ErrorKind.AUTHENTICATION
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("adapter_type", "kind", "path", "response"),
     [

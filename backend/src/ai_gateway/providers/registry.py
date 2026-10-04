@@ -19,6 +19,14 @@ class ProviderRegistry:
         self.credentials = credentials
 
     def create(self, config: ProviderConfig) -> ProviderAdapter:
+        if config.kind is ProviderKind.CODEX:
+            return CodexAdapter(
+                config,
+                self.settings.codex_executable,
+                self.settings.codex_workspace,
+            )
+        if config.kind is ProviderKind.OLLAMA:
+            return OllamaAdapter(config, None)
         allowed = set(self.settings.allowed_api_key_envs)
         secret = (
             os.getenv(config.api_key_env, "")
@@ -26,16 +34,8 @@ class ProviderRegistry:
             else ""
         )
         api_key = secret or self.credentials.get(config.id)
-        if config.kind is ProviderKind.CODEX:
-            return CodexAdapter(
-                config,
-                self.settings.codex_executable,
-                self.settings.codex_workspace,
-            )
         if config.kind is ProviderKind.ANTHROPIC:
             return AnthropicAdapter(config, api_key)
         if config.kind is ProviderKind.GEMINI:
             return GeminiAdapter(config, api_key)
-        if config.kind is ProviderKind.OLLAMA:
-            return OllamaAdapter(config, api_key)
         return OpenAICompatibleAdapter(config, api_key)

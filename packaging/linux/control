@@ -1,0 +1,9 @@
+Package: ai-gateway
+Version: 0.1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, libwebkit2gtk-4.1-0
+Maintainer: Bilius10
+Description: Stateless multi-provider AI gateway desktop application
+ Native Wails desktop interface with an embedded FastAPI sidecar.

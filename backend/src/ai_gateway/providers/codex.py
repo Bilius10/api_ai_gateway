@@ -73,15 +73,25 @@ class CodexAdapter(ProviderAdapter):
         ]
         process: asyncio.subprocess.Process | None = None
         try:
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=run_dir,
-                env=_isolated_environment(),
-                start_new_session=True,
-            )
+            if _uses_process_group():
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=run_dir,
+                    env=_isolated_environment(),
+                    start_new_session=True,
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=run_dir,
+                    env=_isolated_environment(),
+                )
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(prompt.encode()), timeout=self.config.timeout_seconds
             )
@@ -108,14 +118,23 @@ class CodexAdapter(ProviderAdapter):
     async def health(self) -> tuple[bool, str]:
         process: asyncio.subprocess.Process | None = None
         try:
-            process = await asyncio.create_subprocess_exec(
-                self.executable,
-                "--version",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=_isolated_environment(),
-                start_new_session=True,
-            )
+            if _uses_process_group():
+                process = await asyncio.create_subprocess_exec(
+                    self.executable,
+                    "--version",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=_isolated_environment(),
+                    start_new_session=True,
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    self.executable,
+                    "--version",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=_isolated_environment(),
+                )
             stdout, _ = await asyncio.wait_for(process.communicate(), timeout=5)
             return process.returncode == 0, (
                 stdout.decode(errors="replace").strip()[:100] or "unavailable"
@@ -138,9 +157,21 @@ async def _terminate(process: asyncio.subprocess.Process | None) -> None:
     if process is None or process.returncode is not None:
         return
     pid = getattr(process, "pid", None)
-    if isinstance(pid, int):
+    if os.name != "nt" and isinstance(pid, int):
         with contextlib.suppress(ProcessLookupError):
             os.killpg(pid, signal.SIGKILL)
+    elif isinstance(pid, int):
+        with contextlib.suppress(OSError):
+            killer = await asyncio.create_subprocess_exec(
+                "taskkill",
+                "/PID",
+                str(pid),
+                "/T",
+                "/F",
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await killer.wait()
     with contextlib.suppress(ProcessLookupError):
         process.kill()
     with contextlib.suppress(ProcessLookupError):
@@ -160,8 +191,22 @@ def _isolated_environment(source: Mapping[str, str] | None = None) -> dict[str, 
         "HTTP_PROXY",
         "HTTPS_PROXY",
         "NO_PROXY",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "SYSTEMROOT",
+        "COMSPEC",
+        "PATHEXT",
+        "TEMP",
+        "TMP",
     }
+    if os.name == "nt":
+        return {key: value for key, value in values.items() if key.upper() in allowed}
     return {key: value for key, value in values.items() if key in allowed}
+
+
+def _uses_process_group() -> bool:
+    return os.name != "nt"
 
 
 def _parse_output(output: str) -> str:

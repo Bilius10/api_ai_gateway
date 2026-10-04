@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=60.0, gt=0)
     codex_executable: str = "codex"
     codex_workspace: Path = Path(".data/codex-runs")
-    cors_origins: list[str] = ["http://localhost:4200"]
+    cors_origins: list[str] = [
+        "http://wails.localhost",
+        "wails://wails.localhost",
+        "http://localhost",
+    ]
     allowed_api_key_envs: list[str] = [
         "OPENAI_API_KEY",
         "GEMINI_API_KEY",

@@ -52,6 +52,8 @@ class ProviderAdapter(ABC):
 
 
 def classify_http_error(status: int, detail: str = "Provider request failed") -> ProviderError:
+    if status == 408:
+        return ProviderError(ErrorKind.TIMEOUT, "Provider timed out", status_code=504)
     if status == 402:
         return ProviderError(ErrorKind.QUOTA, "Provider quota exhausted", status_code=402)
     if status == 429:

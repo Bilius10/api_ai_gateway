@@ -1,141 +1,115 @@
-# Stateless AI Gateway
+# AI Gateway
 
-Gateway local para uniformizar geração de texto entre Codex CLI, OpenAI, Gemini, Ollama, Anthropic, OpenRouter e endpoints OpenAI-compatible. O painel Angular expõe Dashboard, Providers, Routing, Requests, Playground e Settings.
+Aplicativo desktop stateless para centralizar chamadas a Codex CLI, OpenAI, Gemini, Ollama, Anthropic, OpenRouter, DeepSeek, Qwen e endpoints OpenAI-compatible.
 
-> **Segurança:** o primeiro corte não possui autenticação. Vincule o backend a `127.0.0.1` ou use somente uma rede confiável. Nunca o exponha diretamente à internet.
-
-## Executar no Windows
-
-Na raiz do projeto, dê duplo clique em:
+A interface administrativa é incorporada ao aplicativo Go + Wails. Não existe servidor Angular, porta `4200`, navegador externo ou CLI do produto. O aplicativo inicia um backend FastAPI nativo embutido e mantém a API disponível em:
 
 ```text
-api-ai-gateway.exe
+http://127.0.0.1:8000
+http://<ip-da-maquina>:8000
 ```
 
-Ele abre dois terminais:
+> O primeiro corte não possui autenticação. Use somente no computador local ou em rede confiável. Não exponha a porta `8000` diretamente à internet.
 
-- Backend/API: `http://127.0.0.1:8000` e `http://<ip-da-maquina>:8000`
-- App desktop local com a interface administrativa
+## Instalar e executar
 
-O frontend continua rodando localmente para alimentar a janela do app, mas o uso normal é pelo app aberto pelo executável, não por uma aba do navegador.
+Baixe o artefato correspondente ao sistema operacional na página **Actions** do GitHub:
 
-O executável não exige DevX nem WSL. Ele usa PowerShell, Python e Node instalados no Windows. Quando `uv` estiver disponível, usa `uv`; caso contrário, cria `backend/.venv` com Python e instala as dependências via `pip`.
+- Windows: `api-ai-gateway.exe`
+- Linux: `ai-gateway_0.1.0_amd64.deb` (Ubuntu/Debian) ou o executável `api-ai-gateway`
 
-## Pré-requisitos sem DevX
+O pacote final não exige Python, Node, `uv`, DevX ou WSL. No Windows, o WebView2 já acompanha as versões atuais do sistema. No Linux, a distribuição precisa fornecer GTK3 e WebKit2GTK 4.1.
 
-Para executar em outra máquina sem DevX:
+Ao abrir o aplicativo:
 
-- Windows 10/11 para usar `api-ai-gateway.exe`.
-- PowerShell.
-- Python `3.12+` no Windows.
-- Node.js `22+` com `npm` no Windows.
-- `uv` é opcional, mas recomendado.
-- Codex CLI é opcional e só é necessário se você habilitar o provider Codex CLI.
+1. A janela desktop inicia o backend incorporado.
+2. O aplicativo espera `/api/health` ficar disponível.
+3. Dashboard, Providers, Routing, Requests, Playground e Settings são liberados.
+4. Ao fechar a janela, somente o backend filho iniciado por ela é encerrado.
 
-Para Linux/macOS, use a execução manual abaixo.
+Uma segunda abertura não inicia outro backend nem concorre pelo SQLite. Se a porta `8000` estiver ocupada por outro processo, o aplicativo informa o conflito e não reutiliza esse processo.
 
-## Executar Manualmente Em Linux/macOS
+## Dados locais
 
-Backend:
+Os dados ficam fora da pasta de instalação:
 
-```bash
-cd /home/joao_oliveira/workspaces/api-ai-gateway
-cd backend
-python3.12 -m venv .venv
-. .venv/bin/activate
-pip install -e ".[dev]"
-mkdir -p ../.cache
-if [ ! -f ../.cache/ai-gateway-master-key.env ]; then
-  printf 'AI_GATEWAY_MASTER_KEY=%s\n' "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" > ../.cache/ai-gateway-master-key.env
-fi
-. ../.cache/ai-gateway-master-key.env
-export AI_GATEWAY_MASTER_KEY
-python -m uvicorn ai_gateway.app:app --host 0.0.0.0 --port 8000 --reload
+- Windows: `%LOCALAPPDATA%\AI Gateway`
+- Linux: `${XDG_DATA_HOME:-~/.local/share}/ai-gateway`
+
+O diretório contém SQLite, credenciais criptografadas, chave-mestra separada, logs operacionais e o backend extraído. Prompts e respostas não são persistidos; Requests registra somente IDs, provider/modelo, latência, status, erro sanitizado e tentativas.
+
+## API
+
+Principais endpoints:
+
+```text
+GET    /api/health
+GET    /api/metrics
+GET    /api/providers
+POST   /api/providers
+PUT    /api/providers/{id}
+DELETE /api/providers/{id}
+GET    /api/routing
+PUT    /api/routing
+GET    /api/requests
+GET    /api/requests/{id}
+POST   /api/generate
+POST   /api/generate/stream
+GET    /api/settings
+PUT    /api/settings
 ```
 
-Frontend:
+No modo manual não há fallback. No modo automático, timeout, rate limit, quota, indisponibilidade e erros recuperáveis avançam para o próximo provider por prioridade. O streaming usa SSE e nunca mistura conteúdo de providers diferentes depois que o primeiro trecho é entregue.
 
-```bash
-cd /home/joao_oliveira/workspaces/api-ai-gateway
-cd frontend
-npm ci
-npm start -- --host 127.0.0.1 --port 4200
-```
+## Desenvolvimento com DevX
 
-## DevX
+DevX é somente o gerador do ambiente de desenvolvimento. O código e os binários distribuídos não dependem dele.
 
-DevX é opcional. Ele pode ser usado para gerar um ambiente sandbox/reprodutível com as versões registradas em `devx.lock`, mas o código do backend, o frontend e o executável de execução não dependem dele.
-
-Quando quiser usar DevX:
+Preparar runtimes fixados:
 
 ```powershell
 devx workspace bootstrap --path /home/joao_oliveira/workspaces/api-ai-gateway
 ```
 
-Depois, execute normalmente pelo `api-ai-gateway.exe` ou pelos comandos manuais acima.
+O workspace fixa Go 1.27, Node 22, Python 3.12, `uv` e Codex CLI. Para desenvolvimento da janela Wails, prepare o backend e indique explicitamente o Python do ambiente:
 
-## Recriar o Executável
-
-O fonte do launcher fica em `launcher/AiGatewayLauncher.cs`. Para recriar `api-ai-gateway.exe` no Windows:
-
-```powershell
-powershell.exe -NoProfile -Command "Add-Type -Path .\launcher\AiGatewayLauncher.cs -OutputAssembly .\api-ai-gateway.exe -OutputType ConsoleApplication"
+```bash
+cd /home/joao_oliveira/workspaces/api-ai-gateway/backend
+uv sync --locked --all-groups
+cd ..
+export AI_GATEWAY_BACKEND_EXECUTABLE="$PWD/backend/.venv/bin/python"
+export AI_GATEWAY_BACKEND_ARGS_JSON='["-m","ai_gateway.sidecar"]'
+export AI_GATEWAY_BACKEND_WORKDIR="$PWD/backend"
+go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 dev -tags desktop
 ```
 
-Para validar sem abrir os servidores:
+O comando Wails acima é ferramenta de desenvolvimento, não uma CLI distribuída aos usuários.
 
-```powershell
-.\api-ai-gateway.exe --check
-```
-
-O executável gerado usa o runtime .NET já presente no Windows 10/11.
-
-## Configuração
-
-Variáveis do backend:
-
-- `AI_GATEWAY_DATABASE_PATH`: banco SQLite local; padrão `.data/gateway.db`.
-- `AI_GATEWAY_CREDENTIAL_FILE`: arquivo criptografado; padrão `.data/secrets.enc`.
-- `AI_GATEWAY_MASTER_KEY`: chave Fernet URL-safe de 32 bytes. O executável gera uma chave local em `.cache/ai-gateway-master-key.env` quando ela não existir.
-- `AI_GATEWAY_CODEX_EXECUTABLE`: executável do Codex CLI; padrão `codex`.
-- `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY` e `DASHSCOPE_API_KEY`: credenciais opcionais lidas diretamente do ambiente.
-
-Providers customizados podem ser criados pela API `POST /api/providers`. Credenciais enviadas no campo `api_key` só são aceitas quando `AI_GATEWAY_MASTER_KEY` estiver presente e são armazenadas criptografadas. Prompts e respostas nunca são persistidos; somente IDs, provider/modelo, latência, status, erro sanitizado e tentativas.
-
-## Verificação
+## Verificar
 
 Backend:
 
 ```bash
 cd backend
-python -m pytest
-python -m ruff check .
-python -m mypy src
-```
-
-Com `uv`:
-
-```bash
-cd backend
-uv run pytest
+uv sync --locked --all-groups
+uv run pytest -q
 uv run ruff check .
 uv run mypy src
 ```
 
-Frontend:
+Interface interna:
 
 ```bash
-cd frontend
-npm test -- --watch=false
+cd ui
+npm ci
+npm test
 npm run build
 ```
 
-Smoke test:
+Lifecycle Go:
 
 ```bash
-curl -s http://127.0.0.1:8000/api/health
-curl -s http://127.0.0.1:8000/api/providers
-curl -N -H 'content-type: application/json' -d '{"prompt":"hello","stream":true}' http://127.0.0.1:8000/api/generate/stream
+go test ./internal/...
 ```
 
-Sem provider habilitado, geração responde `503` estruturado. No modo manual não há fallback. No modo automático, timeout, rate limit, quota, indisponibilidade e 5xx recuperáveis avançam para o próximo provider por prioridade. Streaming nativo é usado nos providers OpenAI-compatible (OpenAI, OpenRouter, DeepSeek, Qwen e genéricos). Codex, Gemini, Ollama e Anthropic emitem a resposta completa como um único evento SSE neste primeiro corte. O fallback de streaming só ocorre antes de qualquer conteúdo ser entregue; depois do primeiro trecho, um erro encerra o stream para não misturar respostas de providers diferentes.
+Os builds finais são gerados em runners nativos pelo workflow `.github/workflows/release.yml`: PyInstaller cria o sidecar do mesmo sistema operacional, o sidecar é incorporado ao Wails e o artefato resultante é publicado.

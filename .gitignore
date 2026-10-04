@@ -1,4 +1,4 @@
-.venv/
+backend/.venv/
 __pycache__/
 .pytest_cache/
 .mypy_cache/
@@ -12,6 +12,11 @@ _bmad-output/
 .data/
 secrets.enc
 .env
-frontend/node_modules/
-frontend/dist/
-frontend/.angular/
+backend/build/
+backend/dist/
+ui/node_modules/
+ui/dist/
+build/bin/
+internal/backendbinary/binaries/ai-gateway-backend
+internal/backendbinary/binaries/ai-gateway-backend.exe
+*.exe

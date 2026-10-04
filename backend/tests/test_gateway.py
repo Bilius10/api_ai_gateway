@@ -10,7 +10,13 @@ from httpx import AsyncClient
 
 from ai_gateway.models import ErrorKind, GenerateRequest, ProviderConfig, ProviderKind, ProviderResult
 from ai_gateway.providers.base import ProviderAdapter, ProviderError, classify_http_error
-from ai_gateway.providers.codex import CodexAdapter, _parse_output, classify_cli_error
+from ai_gateway.providers.codex import (
+    CodexAdapter,
+    _isolated_environment,
+    _parse_output,
+    _uses_process_group,
+    classify_cli_error,
+)
 from ai_gateway.providers.http import PRESETS, OpenAICompatibleAdapter
 from ai_gateway.services.secrets import CredentialStore
 
@@ -264,6 +270,53 @@ def test_codex_json_and_text_output_are_normalized() -> None:
     assert classify_cli_error("quota exceeded").kind is ErrorKind.QUOTA
     assert classify_cli_error("429 rate limit").kind is ErrorKind.RATE_LIMIT
     assert classify_cli_error("network unavailable").kind is ErrorKind.OFFLINE
+
+
+def test_codex_process_configuration_is_portable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("ai_gateway.providers.codex.os.name", "nt")
+    assert _uses_process_group() is False
+    environment = _isolated_environment(
+        {
+            "Path": "bin",
+            "LOCALAPPDATA": "local",
+            "SYSTEMROOT": "windows",
+            "AI_GATEWAY_MASTER_KEY": "must-not-leak",
+        }
+    )
+    assert environment == {
+        "Path": "bin",
+        "LOCALAPPDATA": "local",
+        "SYSTEMROOT": "windows",
+    }
+
+
+def test_wails_origins_are_enabled_by_default() -> None:
+    from ai_gateway.config import Settings
+
+    origins = Settings().cors_origins
+    assert "http://wails.localhost" in origins
+    assert "wails://wails.localhost" in origins
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("origin", ["http://wails.localhost", "wails://wails.localhost"])
+async def test_wails_origins_can_call_the_api(client: AsyncClient, origin: str) -> None:
+    preflight = await client.options(
+        "/api/health",
+        headers={"Origin": origin, "Access-Control-Request-Method": "GET"},
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == origin
+    response = await client.get("/api/health", headers={"Origin": origin})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_http_408_is_a_recoverable_timeout() -> None:
+    error = classify_http_error(408)
+    assert error.kind is ErrorKind.TIMEOUT
+    assert error.recoverable is True
+    assert error.status_code == 504
 
 
 def test_credentials_are_encrypted_and_require_master_key(tmp_path: Path) -> None:

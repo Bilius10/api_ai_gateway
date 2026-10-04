@@ -67,4 +67,6 @@ class CredentialStore:
             raise RuntimeError(
                 "Credential store cannot be decrypted with the supplied master key"
             ) from exc
+        if not isinstance(value, dict):
+            raise RuntimeError("Credential store must contain an object")
         return {str(key): str(secret) for key, secret in value.items()}

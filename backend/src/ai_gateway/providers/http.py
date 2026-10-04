@@ -87,6 +87,8 @@ class OpenAICompatibleAdapter(ProviderAdapter):
                         "stream": True,
                     },
                 ) as response:
+                    if response.is_error:
+                        await response.aread()
                     _raise_for_status(response)
                     async for line in response.aiter_lines():
                         if not line.startswith("data:"):

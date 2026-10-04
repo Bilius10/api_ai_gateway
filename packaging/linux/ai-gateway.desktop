@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=AI Gateway
+Comment=Stateless multi-provider AI gateway
+Exec=api-ai-gateway
+Terminal=false
+Categories=Development;Utility;
