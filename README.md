@@ -72,7 +72,7 @@ cd ..
 export AI_GATEWAY_BACKEND_EXECUTABLE="$PWD/backend/.venv/bin/python"
 export AI_GATEWAY_BACKEND_ARGS_JSON='["-m","ai_gateway.sidecar"]'
 export AI_GATEWAY_BACKEND_WORKDIR="$PWD/backend"
-go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 dev -tags desktop
+go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 dev
 ```
 
 Essas ferramentas são necessárias somente para desenvolvimento. Os artefatos publicados não dependem de Python, Node, Go ou WSL instalados.
