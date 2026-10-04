@@ -1,5 +1,5 @@
-# Desktop packaging
+# Empacotamento desktop
 
-The release workflow builds the FastAPI backend with PyInstaller on each target operating system, injects that native sidecar into `internal/backendbinary/binaries/`, and then compiles the Wails application.
+Gere o backend FastAPI com PyInstaller no sistema operacional de destino, copie o sidecar nativo para `internal/backendbinary/binaries/` e compile o aplicativo Wails.
 
-PyInstaller is intentionally executed on native Windows and Linux runners. It is not a cross-compiler. The resulting Wails executable extracts only its own embedded backend into the user's application-data directory.
+PyInstaller não é cross-compiler. O executável Wails resultante extrai somente o backend do próprio sistema para o diretório de dados do usuário.

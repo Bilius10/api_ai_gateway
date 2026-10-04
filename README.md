@@ -13,7 +13,7 @@ http://<ip-da-maquina>:8000
 
 ## Instalar e executar
 
-Baixe o artefato correspondente ao sistema operacional na página **Actions** do GitHub:
+Quando houver uma versão publicada, baixe o artefato correspondente na página **Releases** do GitHub:
 
 - Windows: `api-ai-gateway.exe`
 - Linux: `ai-gateway_0.1.0_amd64.deb` (Ubuntu/Debian) ou o executável `api-ai-gateway`
@@ -77,6 +77,29 @@ go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 dev
 
 Essas ferramentas são necessárias somente para desenvolvimento. Os artefatos publicados não dependem de Python, Node, Go ou WSL instalados.
 
+## Gerar o aplicativo
+
+Execute no próprio sistema operacional de destino:
+
+```bash
+cd backend
+uv sync --locked --all-groups
+uv run pyinstaller ai-gateway-backend.spec --clean --noconfirm
+cd ..
+```
+
+No Linux, copie `backend/dist/ai-gateway-backend`; no Windows, copie `backend/dist/ai-gateway-backend.exe` para `internal/backendbinary/binaries/`. Depois gere a interface e o aplicativo:
+
+```bash
+cd ui
+npm ci
+npm run build
+cd ..
+go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 build -clean
+```
+
+O executável final fica em `build/bin/`.
+
 ## Verificar
 
 Backend:
@@ -104,4 +127,4 @@ Lifecycle Go:
 go test ./internal/...
 ```
 
-Os builds finais são gerados em runners nativos pelo workflow `.github/workflows/release.yml`: PyInstaller cria o sidecar do mesmo sistema operacional, o sidecar é incorporado ao Wails e o artefato resultante é publicado.
+`wails.json` é necessário para o comando de build e não executa validações automáticas.
