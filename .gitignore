@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.devx/
+_bmad/
+_bmad-output/
+*.pyc
+*.db
+.data/
+secrets.enc
+.env
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/

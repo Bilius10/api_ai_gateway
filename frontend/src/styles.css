@@ -1,0 +1,53 @@
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #07110f; color: #e8f4ef; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at 85% 0%, #16352d 0, transparent 34rem), #07110f; }
+button, input, select, textarea { font: inherit; }
+.shell { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
+aside { background: rgba(5, 18, 15, .9); border-right: 1px solid #24443b; padding: 28px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; align-items: center; gap: 11px; color: #f4fff9; text-decoration: none; font-size: 20px; padding: 0 10px 28px; }
+.brand span { display: grid; place-items: center; width: 38px; height: 38px; background: #5ce1b3; color: #052118; border-radius: 12px; font-weight: 900; }
+nav { display: grid; gap: 5px; }
+nav a { color: #9ab8ae; text-decoration: none; padding: 12px 14px; border-radius: 10px; font-weight: 650; }
+nav a:hover, nav a.active { color: #effff9; background: #17352d; }
+aside footer { margin-top: auto; color: #668b7f; padding: 10px; font-size: 13px; }
+main { padding: clamp(24px, 5vw, 68px); max-width: 1400px; width: 100%; }
+header { margin-bottom: 32px; }
+h1 { font-size: clamp(32px, 5vw, 58px); letter-spacing: -.045em; margin: 5px 0 10px; }
+h2 { margin: 0 0 5px; }
+p { color: #9ab8ae; line-height: 1.6; }
+.eyebrow { color: #5ce1b3; text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 800; margin: 0; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; }
+.metrics article, .provider, .panel, .output { border: 1px solid #24443b; background: rgba(13, 34, 28, .78); border-radius: 16px; padding: 22px; }
+.metrics span { color: #8aa99f; display: block; font-size: 13px; }
+.metrics strong { display: block; font-size: 30px; margin-top: 12px; }
+.notice, .error, .state, .empty { margin: 22px 0; padding: 15px 18px; border-radius: 12px; background: #102d25; color: #a8d1c2; }
+.error { background: #3d1d20; color: #ffb5bb; }
+.success { color: #5ce1b3; margin-left: 12px; }
+.stack { display: grid; gap: 12px; }
+.provider { display: grid; grid-template-columns: minmax(200px, 1fr) auto 120px minmax(220px, .8fr); gap: 20px; align-items: center; }
+.provider p { margin: 0; }
+.provider-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 9px; }
+.provider > .pill { grid-column: 1 / -1; justify-self: start; }
+.provider-form { max-width: none; margin-bottom: 24px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+label { color: #b7d0c7; display: grid; gap: 8px; }
+.toggle { display: flex; align-items: center; gap: 8px; }
+input, select, textarea { width: 100%; color: #e8f4ef; background: #061a15; border: 1px solid #34584d; border-radius: 9px; padding: 10px 12px; }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #5ce1b3; }
+button { border: 0; border-radius: 9px; padding: 11px 16px; color: #052118; background: #5ce1b3; cursor: pointer; font-weight: 800; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.secondary { background: #274b40; color: #d9efe7; }
+button.danger { background: #5a252b; color: #ffd4d8; }
+.pill { background: #1b4035; color: #8bf0cd; border-radius: 999px; padding: 5px 9px; font-size: 12px; white-space: nowrap; }
+.panel { display: grid; gap: 20px; max-width: 680px; }
+.panel button { justify-self: start; }
+.table-wrap { overflow-x: auto; border: 1px solid #24443b; border-radius: 16px; }
+table { width: 100%; border-collapse: collapse; min-width: 700px; }
+th, td { text-align: left; padding: 15px 18px; border-bottom: 1px solid #1b382f; }
+th { color: #759b8e; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.playground { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(320px, 1.2fr); gap: 18px; }
+.output pre { white-space: pre-wrap; line-height: 1.65; color: #cce7dd; }
+.detail { max-width: none; margin-top: 20px; }
+.attempt { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(220px, 1fr); gap: 16px; align-items: center; border-top: 1px solid #24443b; padding: 15px 0; }
+.attempt p { margin: 0; }
+@media (max-width: 820px) { .shell { grid-template-columns: 1fr; } aside { position: static; height: auto; padding: 16px; } aside footer { display: none; } .brand { padding-bottom: 14px; } nav { display: flex; overflow-x: auto; } nav a { white-space: nowrap; } main { padding: 28px 18px; } .provider, .playground { grid-template-columns: 1fr; } }
