@@ -20,3 +20,6 @@ build/bin/
 internal/backendbinary/binaries/ai-gateway-backend
 internal/backendbinary/binaries/ai-gateway-backend.exe
 *.exe
+!/AIGatewaySetup.exe
+/cmd/ai-gateway-installer/payload/*
+!/cmd/ai-gateway-installer/payload/.keep

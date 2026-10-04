@@ -13,9 +13,9 @@ http://<ip-da-maquina>:8000
 
 ## Instalar e executar
 
-Quando houver uma versão publicada, baixe o artefato correspondente na página **Releases** do GitHub:
+No Windows, baixe `AIGatewaySetup.exe` diretamente na raiz do repositório e execute-o. O instalador segue o mesmo padrão do DevX: instala em `%LOCALAPPDATA%\Programs\AI Gateway`, cria atalho no Menu Iniciar e registra a desinstalação.
 
-- Windows: `api-ai-gateway.exe`
+- Windows: `AIGatewaySetup.exe`
 - Linux: `ai-gateway_0.1.0_amd64.deb` (Ubuntu/Debian) ou o executável `api-ai-gateway`
 
 O pacote final não exige Python, Node, `uv`, Go ou WSL. No Windows, o WebView2 já acompanha as versões atuais do sistema. No Linux, a distribuição precisa fornecer GTK3 e WebKit2GTK 4.1.
@@ -99,6 +99,8 @@ go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 build -clean
 ```
 
 O executável final fica em `build/bin/`.
+
+No Windows, `scripts/build-windows.ps1` também gera o instalador versionável `AIGatewaySetup.exe` na raiz.
 
 ## Verificar
 
