@@ -18,7 +18,7 @@ Baixe o artefato correspondente ao sistema operacional na página **Actions** do
 - Windows: `api-ai-gateway.exe`
 - Linux: `ai-gateway_0.1.0_amd64.deb` (Ubuntu/Debian) ou o executável `api-ai-gateway`
 
-O pacote final não exige Python, Node, `uv`, DevX ou WSL. No Windows, o WebView2 já acompanha as versões atuais do sistema. No Linux, a distribuição precisa fornecer GTK3 e WebKit2GTK 4.1.
+O pacote final não exige Python, Node, `uv`, Go ou WSL. No Windows, o WebView2 já acompanha as versões atuais do sistema. No Linux, a distribuição precisa fornecer GTK3 e WebKit2GTK 4.1.
 
 Ao abrir o aplicativo:
 
@@ -61,20 +61,12 @@ PUT    /api/settings
 
 No modo manual não há fallback. No modo automático, timeout, rate limit, quota, indisponibilidade e erros recuperáveis avançam para o próximo provider por prioridade. O streaming usa SSE e nunca mistura conteúdo de providers diferentes depois que o primeiro trecho é entregue.
 
-## Desenvolvimento com DevX
+## Desenvolvimento
 
-DevX é somente o gerador do ambiente de desenvolvimento. O código e os binários distribuídos não dependem dele.
-
-Preparar runtimes fixados:
-
-```powershell
-devx workspace bootstrap --path /home/joao_oliveira/workspaces/api-ai-gateway
-```
-
-O workspace fixa Go 1.27, Node 22, Python 3.12, `uv` e Codex CLI. Para desenvolvimento da janela Wails, prepare o backend e indique explicitamente o Python do ambiente:
+Para compilar o projeto a partir do código-fonte, instale Go 1.27, Node 22, Python 3.12 e `uv`. Prepare o backend e indique explicitamente o Python do ambiente ao Wails:
 
 ```bash
-cd /home/joao_oliveira/workspaces/api-ai-gateway/backend
+cd backend
 uv sync --locked --all-groups
 cd ..
 export AI_GATEWAY_BACKEND_EXECUTABLE="$PWD/backend/.venv/bin/python"
@@ -83,7 +75,7 @@ export AI_GATEWAY_BACKEND_WORKDIR="$PWD/backend"
 go run github.com/wailsapp/wails/v2/cmd/wails@v2.15.0 dev -tags desktop
 ```
 
-O comando Wails acima é ferramenta de desenvolvimento, não uma CLI distribuída aos usuários.
+Essas ferramentas são necessárias somente para desenvolvimento. Os artefatos publicados não dependem de Python, Node, Go ou WSL instalados.
 
 ## Verificar
 

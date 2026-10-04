@@ -157,9 +157,11 @@ async def _terminate(process: asyncio.subprocess.Process | None) -> None:
     if process is None or process.returncode is not None:
         return
     pid = getattr(process, "pid", None)
-    if os.name != "nt" and isinstance(pid, int):
+    killpg = getattr(os, "killpg", None)
+    sigkill = getattr(signal, "SIGKILL", None)
+    if os.name != "nt" and isinstance(pid, int) and callable(killpg) and sigkill is not None:
         with contextlib.suppress(ProcessLookupError):
-            os.killpg(pid, signal.SIGKILL)
+            killpg(pid, sigkill)
     elif isinstance(pid, int):
         with contextlib.suppress(OSError):
             killer = await asyncio.create_subprocess_exec(
