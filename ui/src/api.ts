@@ -97,7 +97,8 @@ export const desktopTransport: typeof fetch = async (input, init = {}) => {
   const path = `${parsed.pathname}${parsed.search}`;
   const body = typeof init.body === 'string' ? init.body : '';
   const result = await bridge.APIRequest(String(init.method ?? 'GET'), path, body);
-  return new Response(result.body, {
+  const responseBody = [204, 205, 304].includes(result.status) ? null : result.body;
+  return new Response(responseBody, {
     status: result.status,
     headers: result.headers,
   });

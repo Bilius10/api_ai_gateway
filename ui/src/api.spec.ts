@@ -31,6 +31,14 @@ describe('GatewayApi', () => {
     expect(APIRequest).toHaveBeenCalledWith('GET', '/api/health', '');
   });
 
+  it('accepts empty successful responses when deleting through Wails', async () => {
+    const APIRequest = vi.fn().mockResolvedValue({ status: 204, headers: {}, body: '' });
+    window.go = { main: { App: { APIRequest } } };
+
+    await expect(new GatewayApi().deleteProvider('custom')).resolves.toBeUndefined();
+    expect(APIRequest).toHaveBeenCalledWith('DELETE', '/api/providers/custom', '');
+  });
+
   it('uses the exposed local API and preserves the generate contract', async () => {
     const transport = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ request_id: '1', provider: 'openai', model: 'gpt-5', response: 'answer', attempts: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
     const api = new GatewayApi('http://127.0.0.1:8000/api', transport);

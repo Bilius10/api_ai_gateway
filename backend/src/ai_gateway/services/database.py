@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_attempts_request_id ON attempts(request_id);
 """
 
 
-DEFAULT_PROVIDERS = [
+LEGACY_DEFAULT_PROVIDERS = [
     ProviderConfig(id="codex", name="Codex CLI", kind=ProviderKind.CODEX, enabled=False, priority=10, model="gpt-5", supports_stream=False),
     ProviderConfig(id="openai", name="OpenAI", kind=ProviderKind.OPENAI, enabled=False, priority=20, model="gpt-5", api_key_env="OPENAI_API_KEY"),
     ProviderConfig(
@@ -79,6 +79,8 @@ DEFAULT_PROVIDERS = [
     ProviderConfig(id="qwen", name="Qwen", kind=ProviderKind.QWEN, enabled=False, priority=80, model="qwen-plus", api_key_env="DASHSCOPE_API_KEY"),
 ]
 
+LEGACY_PROVIDER_MIGRATION_KEY = "migration.providers_unseeded_v1"
+
 
 class Database:
     def __init__(self, path: Path) -> None:
@@ -93,16 +95,33 @@ class Database:
             self.connection.executescript(SCHEMA)
             self.connection.commit()
         self.retention_days = 30
-        self._seed()
 
     def close(self) -> None:
         self.connection.close()
 
-    def _seed(self) -> None:
-        if self.list_providers():
-            return
-        for provider in DEFAULT_PROVIDERS:
-            self.upsert_provider(provider)
+    def migrate_legacy_seeded_providers(self) -> list[str]:
+        with self.lock:
+            migrated = self.connection.execute(
+                "SELECT 1 FROM app_settings WHERE key = ?",
+                (LEGACY_PROVIDER_MIGRATION_KEY,),
+            ).fetchone()
+            if migrated:
+                return []
+
+            expected = {provider.id: provider for provider in LEGACY_DEFAULT_PROVIDERS}
+            rows = self.connection.execute("SELECT id, config_json FROM providers").fetchall()
+            removed = [row["id"] for row in rows if row["id"] in expected and ProviderConfig.model_validate_json(row["config_json"]) == expected[row["id"]]]
+            if removed:
+                self.connection.executemany(
+                    "DELETE FROM providers WHERE id = ?",
+                    ((provider_id,) for provider_id in removed),
+                )
+            self.connection.execute(
+                "INSERT INTO app_settings(key, value_json) VALUES(?, ?)",
+                (LEGACY_PROVIDER_MIGRATION_KEY, json.dumps({"completed": True})),
+            )
+            self.connection.commit()
+        return removed
 
     def list_providers(self) -> list[ProviderConfig]:
         with self.lock:
@@ -228,8 +247,7 @@ class Database:
     def get_request(self, request_id: str) -> RequestRecord | None:
         with self.lock:
             row = self.connection.execute(
-                "SELECT r.*, COUNT(a.id) AS attempt_count FROM requests r "
-                "LEFT JOIN attempts a ON a.request_id=r.id WHERE r.id=? GROUP BY r.id",
+                "SELECT r.*, COUNT(a.id) AS attempt_count FROM requests r LEFT JOIN attempts a ON a.request_id=r.id WHERE r.id=? GROUP BY r.id",
                 (request_id,),
             ).fetchone()
         return RequestRecord(**dict(row)) if row else None

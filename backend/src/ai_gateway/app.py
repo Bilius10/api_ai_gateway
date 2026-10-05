@@ -20,6 +20,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         database = Database(runtime_settings.database_path)
         credentials = CredentialStore(runtime_settings.credential_file, runtime_settings.master_key)
+        for provider_id in database.migrate_legacy_seeded_providers():
+            credentials.delete(provider_id)
         registry = ProviderRegistry(runtime_settings, credentials)
         app.state.settings = runtime_settings
         app.state.database = database

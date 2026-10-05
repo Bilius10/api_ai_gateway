@@ -18,6 +18,7 @@ from ai_gateway.providers.codex import (
     classify_cli_error,
 )
 from ai_gateway.providers.http import PRESETS, OpenAICompatibleAdapter
+from ai_gateway.services.database import LEGACY_DEFAULT_PROVIDERS, Database
 from ai_gateway.services.secrets import CredentialStore
 
 
@@ -190,6 +191,33 @@ def test_schema_never_contains_content_columns(app: FastAPI) -> None:
     connection: sqlite3.Connection = app.state.database.connection
     columns = {row[1] for table in ("requests", "attempts") for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}
     assert {"prompt", "response", "content", "api_key"}.isdisjoint(columns)
+
+
+def test_new_database_starts_without_providers(tmp_path: Path) -> None:
+    database = Database(tmp_path / "empty.db")
+    try:
+        assert database.list_providers() == []
+        assert database.migrate_legacy_seeded_providers() == []
+    finally:
+        database.close()
+
+
+def test_legacy_presets_are_removed_once_without_deleting_user_changes(tmp_path: Path) -> None:
+    database = Database(tmp_path / "legacy.db")
+    try:
+        for provider in LEGACY_DEFAULT_PROVIDERS:
+            database.insert_provider(provider)
+        customized = LEGACY_DEFAULT_PROVIDERS[0].model_copy(update={"name": "My Codex"})
+        database.upsert_provider(customized)
+
+        removed = database.migrate_legacy_seeded_providers()
+
+        assert customized.id not in removed
+        assert database.get_provider(customized.id) == customized
+        assert database.list_providers() == [customized]
+        assert database.migrate_legacy_seeded_providers() == []
+    finally:
+        database.close()
 
 
 @pytest.mark.asyncio
