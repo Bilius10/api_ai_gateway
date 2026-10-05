@@ -170,7 +170,7 @@ func registerUninstaller(directory, application, uninstaller string) error {
 	key := `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\AIGateway`
 	values := [][3]string{
 		{"DisplayName", "REG_SZ", productName},
-		{"DisplayVersion", "REG_SZ", "1.0.0"},
+		{"DisplayVersion", "REG_SZ", "1.0.1"},
 		{"Publisher", "REG_SZ", "Bilius10"},
 		{"InstallLocation", "REG_SZ", directory},
 		{"DisplayIcon", "REG_SZ", application},

@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewayApi, SSEParser, providerPayload, type Provider } from './api';
+import { desktopTransport, GatewayApi, SSEParser, providerPayload, type Provider } from './api';
 
 const provider: Provider = {
   id: 'openai', name: 'OpenAI', kind: 'openai', enabled: true, priority: 1,
@@ -8,9 +8,27 @@ const provider: Provider = {
   timeout_seconds: 60, supports_stream: true,
 };
 
+afterEach(() => {
+  delete window.go;
+});
+
 describe('GatewayApi', () => {
   it('uses the same-origin API path by default', () => {
     expect(new GatewayApi().base).toBe('/api');
+  });
+
+  it('uses the Wails bridge instead of browser networking in the desktop app', async () => {
+    const APIRequest = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ok', warning: 'local only' }),
+    });
+    window.go = { main: { App: { APIRequest } } };
+
+    const response = await desktopTransport('/api/health', { method: 'GET' });
+
+    expect(await response.json()).toEqual({ status: 'ok', warning: 'local only' });
+    expect(APIRequest).toHaveBeenCalledWith('GET', '/api/health', '');
   });
 
   it('uses the exposed local API and preserves the generate contract', async () => {

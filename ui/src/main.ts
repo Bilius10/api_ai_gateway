@@ -25,17 +25,6 @@ const DEFAULTS: Record<string, Partial<ProviderWrite>> = {
   'openai-compatible': { base_url: '', model: '', api_key_env: null, supports_stream: true },
 };
 
-type DesktopBridge = {
-  BackendStatus?: () => Promise<{ state: string; message: string }>;
-  RestartBackend?: () => Promise<void>;
-};
-
-declare global {
-  interface Window {
-    go?: { main?: { App?: DesktopBridge } };
-  }
-}
-
 let currentAbort: AbortController | undefined;
 let activePage = '';
 

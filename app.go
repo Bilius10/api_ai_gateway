@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,10 +24,69 @@ type App struct {
 	ctx        context.Context
 	backend    *backendprocess.Manager
 	startupErr error
+	apiBaseURL string
+	apiClient  *http.Client
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{
+		apiBaseURL: "http://127.0.0.1:8000",
+		apiClient:  &http.Client{Timeout: 10 * time.Minute},
+	}
+}
+
+type APIResponse struct {
+	Status  int               `json:"status"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
+}
+
+const maxDesktopResponseBytes = 16 << 20
+
+func (a *App) APIRequest(method, path, body string) (APIResponse, error) {
+	if path != "/api" && !strings.HasPrefix(path, "/api/") {
+		return APIResponse{}, fmt.Errorf("desktop API path must start with /api")
+	}
+	method = strings.ToUpper(strings.TrimSpace(method))
+	switch method {
+	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch:
+	default:
+		return APIResponse{}, fmt.Errorf("desktop API method is not allowed")
+	}
+
+	a.mu.RLock()
+	appCtx := a.ctx
+	baseURL := a.apiBaseURL
+	client := a.apiClient
+	a.mu.RUnlock()
+	if appCtx == nil {
+		appCtx = context.Background()
+	}
+	request, err := http.NewRequestWithContext(appCtx, method, baseURL+path, strings.NewReader(body))
+	if err != nil {
+		return APIResponse{}, fmt.Errorf("create desktop API request: %w", err)
+	}
+	if body != "" {
+		request.Header.Set("Content-Type", "application/json")
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return APIResponse{}, fmt.Errorf("call local API: %w", err)
+	}
+	defer response.Body.Close()
+
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxDesktopResponseBytes+1))
+	if err != nil {
+		return APIResponse{}, fmt.Errorf("read local API response: %w", err)
+	}
+	if len(payload) > maxDesktopResponseBytes {
+		return APIResponse{}, fmt.Errorf("local API response exceeds desktop limit")
+	}
+	headers := map[string]string{}
+	if contentType := response.Header.Get("Content-Type"); contentType != "" {
+		headers["Content-Type"] = contentType
+	}
+	return APIResponse{Status: response.StatusCode, Headers: headers, Body: string(payload)}, nil
 }
 
 func (a *App) initialize() {

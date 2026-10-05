@@ -69,6 +69,40 @@ export interface StreamEvent {
   data: Record<string, unknown>;
 }
 
+interface DesktopAPIResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+interface DesktopBridge {
+  APIRequest(method: string, path: string, body: string): Promise<DesktopAPIResponse>;
+  BackendStatus?: () => Promise<{ state: string; message: string }>;
+  RestartBackend?: () => Promise<void>;
+}
+
+declare global {
+  interface Window {
+    go?: { main?: { App?: DesktopBridge } };
+  }
+}
+
+export const desktopTransport: typeof fetch = async (input, init = {}) => {
+  const bridge = window.go?.main?.App;
+  if (!bridge) return fetch(input, init);
+  if (init.signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+
+  const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  const parsed = new URL(raw, 'http://wails.localhost');
+  const path = `${parsed.pathname}${parsed.search}`;
+  const body = typeof init.body === 'string' ? init.body : '';
+  const result = await bridge.APIRequest(String(init.method ?? 'GET'), path, body);
+  return new Response(result.body, {
+    status: result.status,
+    headers: result.headers,
+  });
+};
+
 export class SSEParser {
   private buffer = '';
 
@@ -119,7 +153,7 @@ export function providerPayload(provider: Provider, apiKey?: string | null): Pro
 export class GatewayApi {
   constructor(
     readonly base = '/api',
-    private readonly transport: typeof fetch = fetch,
+    private readonly transport: typeof fetch = desktopTransport,
   ) {}
 
   health(): Promise<{ status: string; warning: string }> { return this.request('/health'); }
