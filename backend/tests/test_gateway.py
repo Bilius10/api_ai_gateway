@@ -303,10 +303,15 @@ def test_wails_origins_are_enabled_by_default() -> None:
 async def test_wails_origins_can_call_the_api(client: AsyncClient, origin: str) -> None:
     preflight = await client.options(
         "/api/health",
-        headers={"Origin": origin, "Access-Control-Request-Method": "GET"},
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Private-Network": "true",
+        },
     )
     assert preflight.status_code == 200
     assert preflight.headers["access-control-allow-origin"] == origin
+    assert preflight.headers["access-control-allow-private-network"] == "true"
     response = await client.get("/api/health", headers={"Origin": origin})
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == origin
