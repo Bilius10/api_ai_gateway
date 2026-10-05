@@ -118,7 +118,7 @@ export function providerPayload(provider: Provider, apiKey?: string | null): Pro
 
 export class GatewayApi {
   constructor(
-    readonly base = 'http://127.0.0.1:8000/api',
+    readonly base = '/api',
     private readonly transport: typeof fetch = fetch,
   ) {}
 

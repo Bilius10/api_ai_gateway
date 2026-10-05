@@ -9,6 +9,10 @@ const provider: Provider = {
 };
 
 describe('GatewayApi', () => {
+  it('uses the same-origin API path by default', () => {
+    expect(new GatewayApi().base).toBe('/api');
+  });
+
   it('uses the exposed local API and preserves the generate contract', async () => {
     const transport = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ request_id: '1', provider: 'openai', model: 'gpt-5', response: 'answer', attempts: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
     const api = new GatewayApi('http://127.0.0.1:8000/api', transport);
